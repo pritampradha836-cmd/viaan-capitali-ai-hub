@@ -1,0 +1,6 @@
+{
+  "name": "HolidayGenie AI - Travel Business Management Suite",
+  "description": "An enterprise holiday and travel management platform featuring an executive dashboard, NLP itinerary planner, ML predictive pricing, geospatial big data analytics, and operational automation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
