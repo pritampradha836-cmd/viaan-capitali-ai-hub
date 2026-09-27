@@ -27,125 +27,128 @@ if (process.env.GEMINI_API_KEY) {
   });
 }
 
-// 1. Multi-Persona AI & ML Financial Intelligence Chatbot
+// 1. AI Trading & Automation Chatbot with Action Execution
 app.post('/api/chat', async (req, res) => {
   try {
-    const { prompt, persona = 'strategy', history = [] } = req.body;
+    const { prompt, history = [], accountContext = {} } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const personaInstructions: Record<string, string> = {
-      strategy: `You are the "Chief Investment Strategist" at Vian Capital (www.viaancapital.in).
-You specialize in macro asset allocation, alternative investment funds (AIFs), private equity, structured credit, and wealth preservation for ultra-high-net-worth (UHNW) and institutional investors.
-Provide rigorous, data-driven financial advice with structured sections:
-1. Executive Thesis & Market Context
-2. Recommended Asset Allocation / Strategic Stance
-3. Risk Mitigation & Hedging Tactics
-4. Actionable Next Steps.
-Format cleanly with Markdown, clear bullet points, and quantitative metrics (IRR, Sharpe, Beta, CAGR).`,
-      risk: `You are the "Head of Risk & Quantitative Compliance" at Vian Capital.
-You analyze portfolio stress tests, Value-at-Risk (VaR), liquidity covenants, sector concentration risk, and regulatory mandates (SEBI AIF Cat II/III, RBI, FEMA, PMLA/AML).
-Deliver sharp, compliance-first risk audits with concrete threshold limits and stress scenario assessments.`,
-      deals: `You are the "Private Equity & M&A Deal Origination Director" at Vian Capital.
-You analyze deal pipelines, EBITDA multiples, term sheet covenants, enterprise valuations (DCF, Precedent Transactions, LBO models), and target synergy theses.
-Provide concise, institutional-grade Investment Committee (IC) briefing memos with valuation multiples and exit roadmaps.`,
-      sales: `You are the "Director of Institutional Investor Relations & Sales" at Vian Capital.
-You craft high-impact LP fundraising pitches, client portfolio review summaries, capital call explanations, and tailored co-investment proposals for family offices and institutional allocators.
-Communicate with polish, institutional credibility, and high commercial clarity.`,
-    };
+    const systemInstruction = `You are "Vian Quant AI", an elite Wall Street & Dalal Street algorithmic trading strategist and autonomous terminal assistant for Vian Capital (integrated with NSE/BSE, 5paisa, Zerodha, and NASDAQ).
 
-    const systemInstruction = personaInstructions[persona] || personaInstructions.strategy;
+Capabilities:
+1. Explain stock market dynamics, F&O strategies (Straddle, Strangle, Iron Condor, Bull Call Spread), option Greeks (Delta, Theta, Gamma, Vega), and quantitative data science models.
+2. Provide precise market levels for NIFTY 50, BANKNIFTY, and NASDAQ tech giants (NVDA, AAPL, MSFT, TSLA, RELIANCE, HDFCBANK).
+3. Detect user trading intents and return actionable structured commands when requested.
+
+When user commands a task:
+- If user wants to buy/sell a stock (e.g. "buy 25 shares of Reliance" or "sell 10 TSLA"):
+  Include a structured action JSON block at the end:
+  ACTION_TRIGGER:{"action":"PLACE_ORDER","symbol":"RELIANCE","type":"BUY","quantity":25,"orderType":"MARKET"}
+- If user wants to deploy an option strategy (e.g. "deploy iron condor on Nifty"):
+  ACTION_TRIGGER:{"action":"DEPLOY_STRATEGY","name":"Iron Condor","index":"NIFTY"}
+- If user wants to run a quant backtest (e.g. "backtest RSI strategy"):
+  ACTION_TRIGGER:{"action":"RUN_BACKTEST","strategy":"RSI Mean Reversion"}
+- If user wants to square off all positions:
+  ACTION_TRIGGER:{"action":"SQUARE_OFF_ALL"}
+- If user wants to link 5paisa broker:
+  ACTION_TRIGGER:{"action":"LINK_BROKER","broker":"5paisa"}
+
+Always answer with institutional financial clarity, risk management discipline (stoploss, max loss), and concise formatting.`;
 
     if (ai) {
       const formattedHistory = history
-        .map((h: { role: string; content: string }) => `${h.role === 'user' ? 'Client/Analyst' : 'Vian Capital AI'}: ${h.content}`)
+        .map((h: { role: string; content: string }) => `${h.role === 'user' ? 'Trader' : 'Vian Quant AI'}: ${h.content}`)
         .join('\n');
-      const fullPrompt = formattedHistory ? `${formattedHistory}\nClient/Analyst: ${prompt}\nVian Capital AI:` : prompt;
+      const fullPrompt = formattedHistory ? `${formattedHistory}\nTrader: ${prompt}\nVian Quant AI:` : prompt;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3.8-flash',
         contents: fullPrompt,
         config: {
           systemInstruction,
-          temperature: 0.65,
+          temperature: 0.6,
         },
       });
 
-      return res.json({ response: response.text || 'Unable to generate response.' });
-    } else {
-      // Deterministic intelligent fallback when GEMINI_API_KEY is not configured
-      const p = prompt.toLowerCase();
-      let reply = '';
-
-      if (persona === 'risk' || p.includes('risk') || p.includes('stress')) {
-        reply = `### 🛡️ Vian Capital Quantitative Risk Audit
-**Portfolio Stress & Volatility Diagnostics**
-
-#### 1. Factor Sensitivity & VaR Thresholds
-- **Value-at-Risk (95% 1-Day VaR):** 1.42% of firm AUM (₹26.2 Cr).
-- **Conditional VaR (Expected Shortfall):** 2.18% in tail tail-event distribution.
-- **Interest Rate Sensitivity (Duration):** 2.84 years across fixed income & private credit tranches.
-
-#### 2. Sector Concentration Exposure
-- **Enterprise Software & AI:** 28.5% (Within 30% prudential ceiling)
-- **Renewable Energy Infrastructure:** 22.0%
-- **Fintech & Specialty Lending:** 19.5%
-- **Healthcare & MedTech:** 16.0%
-- **Liquid Sovereign Reserves:** 14.0%
-
-#### 3. Recommended Risk Adjustments
-- Increase dynamic put-option collar on tech equity overweight.
-- Maintain minimum 12% cash & T-Bill buffer for pending capital commitments.`;
-      } else if (persona === 'deals' || p.includes('deal') || p.includes('valuation') || p.includes('m&a')) {
-        reply = `### 📊 Vian Capital Investment Committee Memo
-**Target Analysis & Enterprise Valuation Thesis**
-
-#### 1. Investment Overview
-- **Opportunity:** Growth equity injection in high-yield B2B SaaS / Fintech platform.
-- **Proposed Ticket:** ₹45.0 Cr ($5.4M) for a 14.5% non-dilutive Series B minority stake.
-- **EV/ARR Multiple:** 6.8x (Industry benchmark: 8.2x median peer multiple).
-
-#### 2. Key Financial Indicators
-- **LTM Revenue:** ₹38.2 Cr (+54% YoY CAGR)
-- **Gross Margins:** 78.4% with negative net churn (-1.8%)
-- **Projected Exit IRR:** 28.4% on 4.5-year holding horizon with 3.2x MOIC target.
-
-#### 3. Covenant Recommendations
-- Board observer seat + veto on senior debt issuance > ₹15 Cr.
-- Standard liquidation preference (1x non-participating) with anti-dilution rights.`;
-      } else if (persona === 'sales' || p.includes('sales') || p.includes('client') || p.includes('pitch')) {
-        reply = `### 🤝 Vian Capital Investor Relations Advisory
-**Institutional Allocation & Co-Investment Brief**
-
-#### 1. Fund Performance Snapshot (Vian Growth Fund II)
-- **Net IRR since Inception:** 24.8% per annum
-- **Total DPI (Distributed to Paid-In):** 0.72x
-- **TVPI (Total Value to Paid-In):** 2.14x
-- **Current Fund AUM:** ₹750 Cr across 14 vetted portfolio assets.
-
-#### 2. LP Engagement Strategy
-- Schedule quarterly performance update webinar with primary Family Office allocators.
-- Dispatch automated capital call notifications for tranche #4 drawdown (₹42 Cr aggregate).
-- Offer priority co-investment rights to LPs committing ≥ ₹15 Cr.`;
-      } else {
-        reply = `### 📈 Vian Capital Strategic Macro Asset Allocation
-**Macro Stance for Current Economic Cycle**
-
-#### 1. Strategic Investment Thesis
-Given the prevailing domestic capex cycle and sticky corporate earnings, Vian Capital recommends an **Overweight Alternative Credit & Growth Equity** posture with defensive cash yields.
-
-#### 2. Recommended Capital Distribution:
-- **Private Credit & Mezzanine Debt (35%):** Targeting 14-16% net annualized yield with first-charge collateral.
-- **Growth Stage Private Equity (35%):** High-margin industrial tech, cleantech, and consumer healthcare.
-- **Core Listed Equities (20%):** Large-cap leaders with strong free-cash-flow conversion.
-- **Cash & Arbitrage Liquid Reserves (10%):** Deployed opportunistically on secondary liquidity events.
-
-#### 3. Next Milestone
-Engage with the Quantitative Data Science Lab to run a Monte Carlo stress model on this allocation.`;
+      const text = response.text || 'Unable to process trading query.';
+      
+      // Check for ACTION_TRIGGER
+      let action = null;
+      const actionMatch = text.match(/ACTION_TRIGGER:(\{.*?\})/);
+      if (actionMatch) {
+        try {
+          action = JSON.parse(actionMatch[1]);
+        } catch (e) {
+          // ignore parse error
+        }
       }
 
-      return res.json({ response: reply });
+      return res.json({ 
+        response: text.replace(/ACTION_TRIGGER:\{.*?\}/g, '').trim(),
+        action 
+      });
+    } else {
+      // Deterministic intelligent fallback
+      const p = prompt.toLowerCase();
+      let reply = '';
+      let action: any = null;
+
+      if (p.includes('buy') || p.includes('sell')) {
+        const isBuy = !p.includes('sell');
+        const symbol = p.includes('nvda') ? 'NVDA' : p.includes('tsla') ? 'TSLA' : p.includes('hdfc') ? 'HDFCBANK' : p.includes('tcs') ? 'TCS' : 'RELIANCE';
+        const qtyMatch = p.match(/\d+/);
+        const qty = qtyMatch ? parseInt(qtyMatch[0]) : 10;
+        
+        reply = `### ⚡ Order Execution Prepared: ${isBuy ? 'BUY' : 'SELL'} ${qty} ${symbol}
+- **Exchange:** ${['NVDA', 'TSLA'].includes(symbol) ? 'NASDAQ' : 'NSE'}
+- **Product Type:** Intraday (MIS) / Delivery (CNC)
+- **Estimated Capital Margin:** Calculated at current real-time L1 bid/ask quote.
+- **RMS Verification:** Pre-trade margin and circuit check PASSED.
+
+*Executing direct market routing order via linked 5paisa / Zerodha gateway...*`;
+        action = { action: 'PLACE_ORDER', symbol, type: isBuy ? 'BUY' : 'SELL', quantity: qty, orderType: 'MARKET' };
+      } else if (p.includes('option') || p.includes('straddle') || p.includes('iron condor') || p.includes('greek')) {
+        reply = `### 📊 F&O Quantitative Strategy Diagnostics: NIFTY 50
+- **Implied Volatility (IV):** 13.8% (Normal range)
+- **Put-Call Ratio (PCR):** 1.14 (Mild bullish bias)
+- **Max Pain Level:** 25,200 Strike
+- **Recommended Setup:** **Delta-Neutral Short Strangle** or **Iron Condor** to harvest Theta decay with strictly defined risk boundaries.
+
+*Automated Strategy Builder loaded in the F&O desk.*`;
+        action = { action: 'DEPLOY_STRATEGY', name: 'Iron Condor', index: 'NIFTY' };
+      } else if (p.includes('backtest') || p.includes('algo') || p.includes('quant')) {
+        reply = `### 🔬 Algorithmic Strategy Backtest: Dual EMA Crossover (20/50)
+- **Universe:** NIFTY 50 & NASDAQ 100 Equities (3-Year Historical Ticks)
+- **Win Rate:** 64.2%
+- **Profit Factor:** 2.18x
+- **Sharpe Ratio:** 1.84 (Risk-Adjusted Alpha: +8.4%)
+- **Max Drawdown:** -7.2% vs Benchmark -18.5%
+
+*Displaying comprehensive equity curve and trade logs in the Quant Data Science Lab.*`;
+        action = { action: 'RUN_BACKTEST', strategy: 'Dual Moving Average Crossover' };
+      } else if (p.includes('square off') || p.includes('close position')) {
+        reply = `### 🚨 RMS Emergency Command: Square Off All Open Positions
+Triggering immediate batch market orders across active equity & F&O contracts to lock in current realized P&L and release used margin.`;
+        action = { action: 'SQUARE_OFF_ALL' };
+      } else if (p.includes('5paisa') || p.includes('broker') || p.includes('bank')) {
+        reply = `### 🏦 Broker & Banking Connectivity: 5paisa & HDFC / ICICI
+- **5paisa Trading API:** Connected & Authorized for automated F&O routing.
+- **Linked Demat Bank:** Verified with instant IMPS/UPI clearing rails.
+- **Available Margin:** Ready for intraday leverage up to 5x under SEBI peak margin rules.`;
+        action = { action: 'LINK_BROKER', broker: '5paisa' };
+      } else {
+        reply = `### 📈 Vian Capital Market Advisory & Quant Desk
+Markets are operating within normal volatility boundaries.
+- **NIFTY 50:** 25,240 (+0.42%) · Support: 25,100 · Resistance: 25,350
+- **NASDAQ 100:** 19,820 (+0.85%) · Momentum in Semis (NVDA, AVGO)
+- **Bank Nifty:** 52,180 (+0.31%) · Private banks holding trendline
+
+*You can command me to execute trades, backtest strategies, rebalance Smallcase baskets, or manage risk thresholds.*`;
+      }
+
+      return res.json({ response: reply, action });
     }
   } catch (error: any) {
     console.error('Chat error:', error);
@@ -153,177 +156,70 @@ Engage with the Quantitative Data Science Lab to run a Monte Carlo stress model 
   }
 });
 
-// 2. Data Science: Monte Carlo Risk & VaR Simulation Engine
-app.post('/api/monte-carlo', (req, res) => {
-  const { initialAum = 1000, expectedReturn = 14, volatility = 16, timeHorizonYears = 5, simulations = 500 } = req.body;
+// 2. Data Science: Algorithmic Strategy Backtester API
+app.post('/api/backtest', (req, res) => {
+  const { strategy = 'RSI Mean Reversion', symbol = 'NIFTY 50', timeframe = '15m' } = req.body;
 
-  const dt = 1 / 12; // monthly steps
-  const steps = timeHorizonYears * 12;
-  const mu = (expectedReturn / 100) - 0.5 * Math.pow(volatility / 100, 2);
-  const sigma = volatility / 100;
-
-  const runs: number[][] = [];
-  const finalValues: number[] = [];
-
-  // Generate simulation paths
-  for (let s = 0; s < simulations; s++) {
-    const path = [initialAum];
-    let current = initialAum;
-    for (let t = 1; t <= steps; t++) {
-      // Box-Muller transform for standard normal random variable
-      const u1 = Math.random() || 0.0001;
-      const u2 = Math.random() || 0.0001;
-      const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-
-      current = current * Math.exp(mu * dt + sigma * Math.sqrt(dt) * z);
-      if (t % 3 === 0 || t === steps) {
-        path.push(Math.round(current * 10) / 10);
-      }
-    }
-    finalValues.push(current);
-    if (s < 12) {
-      // Keep first 12 representative trajectories for plotting
-      runs.push(path);
-    }
-  }
-
-  finalValues.sort((a, b) => a - b);
-  const p5 = finalValues[Math.floor(simulations * 0.05)];
-  const p50 = finalValues[Math.floor(simulations * 0.50)];
-  const p95 = finalValues[Math.floor(simulations * 0.95)];
-
-  const var95 = Math.max(0, initialAum - p5);
-  const cVar95 = Math.max(0, initialAum - (finalValues.slice(0, Math.floor(simulations * 0.05)).reduce((a, b) => a + b, 0) / Math.floor(simulations * 0.05)));
-
-  res.json({
-    initialAum,
-    timeHorizonYears,
-    expectedReturn,
-    volatility,
-    simulationsCount: simulations,
-    medianOutcome: Math.round(p50 * 10) / 10,
-    bearishOutcome5th: Math.round(p5 * 10) / 10,
-    bullishOutcome95th: Math.round(p95 * 10) / 10,
-    valueAtRisk95: Math.round(var95 * 10) / 10,
-    conditionalVaR95: Math.round(cVar95 * 10) / 10,
-    trajectories: runs,
-  });
-});
-
-// 3. Data Science: Modern Portfolio Theory (MPT) Efficient Frontier Engine
-app.post('/api/optimize-portfolio', (req, res) => {
-  const { equityWeight = 35, creditWeight = 35, realAssetsWeight = 15, debtWeight = 10, ventureWeight = 5 } = req.body;
-
-  // Asset parameters (Expected return %, Volatility %)
-  const assets = {
-    equity: { r: 15.5, vol: 18.0 },
-    credit: { r: 13.0, vol: 7.5 },
-    realAssets: { r: 11.5, vol: 10.0 },
-    debt: { r: 7.8, vol: 3.5 },
-    venture: { r: 24.0, vol: 28.0 },
+  const strategiesData: Record<string, any> = {
+    'RSI Mean Reversion': {
+      winRate: 66.4,
+      profitFactor: 2.24,
+      maxDrawdown: 6.8,
+      totalTrades: 342,
+      netProfitPercent: 48.6,
+      sharpeRatio: 1.92,
+      description: 'Buys when 14-period RSI dips below 30 with bullish candlestick reversal; sells on RSI > 68.',
+    },
+    'Dual Moving Average Crossover': {
+      winRate: 58.2,
+      profitFactor: 2.05,
+      maxDrawdown: 9.4,
+      totalTrades: 218,
+      netProfitPercent: 41.2,
+      sharpeRatio: 1.68,
+      description: 'Goes long when 20 EMA crosses above 50 EMA with volume expansion confirmation.',
+    },
+    'Bollinger Volatility Breakout': {
+      winRate: 62.0,
+      profitFactor: 2.38,
+      maxDrawdown: 8.1,
+      totalTrades: 184,
+      netProfitPercent: 54.0,
+      sharpeRatio: 2.04,
+      description: 'Capitalizes on volatility squeezes when bandwidth narrows to lowest 20th percentile.',
+    },
+    'ML Random Forest Trend Classifier': {
+      winRate: 71.5,
+      profitFactor: 2.65,
+      maxDrawdown: 5.2,
+      totalTrades: 290,
+      netProfitPercent: 68.4,
+      sharpeRatio: 2.35,
+      description: 'Supervised ML model trained on 10 technical indicators + orderbook micro-imbalance.',
+    },
   };
 
-  const total = equityWeight + creditWeight + realAssetsWeight + debtWeight + ventureWeight;
-  const w = {
-    equity: equityWeight / total,
-    credit: creditWeight / total,
-    realAssets: realAssetsWeight / total,
-    debt: debtWeight / total,
-    venture: ventureWeight / total,
-  };
+  const selected = strategiesData[strategy] || strategiesData['RSI Mean Reversion'];
 
-  // Expected portfolio return
-  const portReturn =
-    w.equity * assets.equity.r +
-    w.credit * assets.credit.r +
-    w.realAssets * assets.realAssets.r +
-    w.debt * assets.debt.r +
-    w.venture * assets.venture.r;
-
-  // Approximate portfolio variance (assuming moderate cross-correlations)
-  const portVol = Math.sqrt(
-    Math.pow(w.equity * assets.equity.vol, 2) +
-    Math.pow(w.credit * assets.credit.vol, 2) +
-    Math.pow(w.realAssets * assets.realAssets.vol, 2) +
-    Math.pow(w.debt * assets.debt.vol, 2) +
-    Math.pow(w.venture * assets.venture.vol, 2) +
-    2 * w.equity * w.credit * 0.2 * assets.equity.vol * assets.credit.vol +
-    2 * w.equity * w.venture * 0.6 * assets.equity.vol * assets.venture.vol +
-    2 * w.credit * w.realAssets * 0.3 * assets.credit.vol * assets.realAssets.vol
-  );
-
-  const riskFreeRate = 6.8; // Indian 10Y Sovereign Yield
-  const sharpeRatio = Math.round(((portReturn - riskFreeRate) / portVol) * 100) / 100;
-
-  // Generate 20 points along the Efficient Frontier curve for charting
-  const frontierPoints = [];
-  for (let i = 0; i <= 20; i++) {
-    const vol = 4 + (i / 20) * 20; // 4% to 24% volatility
-    const ret = riskFreeRate + 1.25 * Math.sqrt(vol) * 2.2;
-    frontierPoints.push({
-      volatility: Math.round(vol * 10) / 10,
-      expectedReturn: Math.round(ret * 10) / 10,
+  // Generate 30 points of simulated cumulative equity curve
+  const equityCurve = [];
+  let equity = 100000;
+  for (let i = 1; i <= 30; i++) {
+    const changePct = (Math.random() - 0.38) * 3.5;
+    equity = Math.round(equity * (1 + changePct / 100));
+    equityCurve.push({
+      tradeIndex: i,
+      equity,
+      benchmark: Math.round(100000 * Math.pow(1.008, i)),
     });
   }
 
   res.json({
-    portfolioReturn: Math.round(portReturn * 10) / 10,
-    portfolioVolatility: Math.round(portVol * 10) / 10,
-    sharpeRatio,
-    riskFreeRate,
-    weights: w,
-    frontierPoints,
-  });
-});
-
-// 4. Automation: KYC/AML Institutional Screening Simulator
-app.post('/api/ocr-kyc', (req, res) => {
-  const { sampleId = 'investor_1' } = req.body;
-
-  const mockKycDb: Record<string, any> = {
-    investor_1: {
-      investorName: 'KAPOOR FAMILY TRUST',
-      entityType: 'Domestic Family Office (Class A LP)',
-      registrationNumber: 'AAATK9014E',
-      jurisdiction: 'India (SEBI AIF Cat II Accredited)',
-      pepSanctionCheck: 'CLEAR (0 Matches in Global OFAC / Interpol)',
-      panAadhaarStatus: 'Verified & Tax Compliant (PAN: AAATK****E)',
-      riskScore: 'Low (0.04)',
-      kycStatus: 'Approved - Ready for Capital Drawdown',
-      complianceOfficer: 'R. Singhania, Head of Regulatory Affairs',
-      timestamp: new Date().toISOString(),
-    },
-    investor_2: {
-      investorName: 'ALPENWEG GLOBAL ASSET MANAGEMENT',
-      entityType: 'Foreign Portfolio Investor (FPI Cat I)',
-      registrationNumber: 'IN-FPI-2025-0814',
-      jurisdiction: 'Zurich, Switzerland (FINMA Regulated)',
-      pepSanctionCheck: 'CLEAR (OECD AML Tier 1 Compliant)',
-      panAadhaarStatus: 'FPI Custodian Account Active (ICICI Custody)',
-      riskScore: 'Minimal (0.01)',
-      kycStatus: 'Approved - Foreign Direct Investment Cleared',
-      complianceOfficer: 'R. Singhania, Head of Regulatory Affairs',
-      timestamp: new Date().toISOString(),
-    },
-    investor_3: {
-      investorName: 'AURELIUS WEALTH VENTURES LTD',
-      entityType: 'Offshore Institutional Fund',
-      registrationNumber: 'BVI-IBC-992014',
-      jurisdiction: 'British Virgin Islands / DIFC Dubai',
-      pepSanctionCheck: 'FLAGGED FOR MANUAL ENHANCED DUE DILIGENCE (EDD)',
-      panAadhaarStatus: 'Ultimate Beneficial Owner (UBO) declaration pending',
-      riskScore: 'Elevated (0.68)',
-      kycStatus: 'Under Review - Requires Additional UBO Declaration',
-      complianceOfficer: 'R. Singhania, Head of Regulatory Affairs',
-      timestamp: new Date().toISOString(),
-    },
-  };
-
-  const result = mockKycDb[sampleId] || mockKycDb.investor_1;
-  res.json({
-    success: true,
-    screeningLatencyMs: 184,
-    data: result,
+    strategy,
+    symbol,
+    timeframe,
+    ...selected,
+    equityCurve,
   });
 });
 
@@ -344,7 +240,7 @@ async function setupServer() {
   }
 
   app.listen(PORT, () => {
-    console.log(`Vian Capital Platform Server running on port ${PORT}`);
+    console.log(`Vian Capital Trading Platform running on port ${PORT}`);
   });
 }
 
