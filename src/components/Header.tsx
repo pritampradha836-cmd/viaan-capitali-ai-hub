@@ -21,8 +21,9 @@ export const Header: React.FC<HeaderProps> = ({
   onQuickOrderClick,
   onOpenChat,
 }) => {
-  const navItems: Array<{ id: NavigationTab; label: string }> = [
+  const navItems: Array<{ id: NavigationTab; label: string; highlight?: boolean }> = [
     { id: 'terminal', label: 'Terminal' },
+    { id: 'optimizations', label: 'Market Optimizations', highlight: true },
     { id: 'fand-o', label: 'F&O Desk' },
     { id: 'baskets', label: 'Baskets' },
     { id: 'quant', label: 'Quant Lab' },
@@ -84,13 +85,18 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={item.id}
                 onClick={() => onSelectTab(item.id)}
-                className={`whitespace-nowrap transition-colors py-1 cursor-pointer border-b-2 font-medium text-xs sm:text-sm ${
+                className={`whitespace-nowrap transition-colors py-1 cursor-pointer border-b-2 font-medium text-xs sm:text-sm flex items-center gap-1.5 ${
                   isActive
                     ? 'border-[#001A8C] text-[#001A8C] font-bold'
                     : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.highlight && (
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-blue-100 text-blue-800 font-extrabold uppercase">
+                    SOR/Carry
+                  </span>
+                )}
               </button>
             );
           })}

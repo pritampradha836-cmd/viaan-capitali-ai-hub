@@ -13,7 +13,7 @@ export const ThematicBaskets: React.FC<ThematicBasketsProps> = ({
   availableCash,
 }) => {
   const [selectedBasket, setSelectedBasket] = useState<ThematicBasket>(baskets[0]);
-  const [filterExchange, setFilterExchange] = useState<'ALL' | 'NSE' | 'NASDAQ' | 'HYBRID'>('ALL');
+  const [filterExchange, setFilterExchange] = useState<'ALL' | 'BSE' | 'NSE' | 'NASDAQ' | 'HYBRID'>('ALL');
 
   const filteredBaskets = baskets.filter(
     (b) => filterExchange === 'ALL' || b.exchange === filterExchange
@@ -33,7 +33,7 @@ export const ThematicBaskets: React.FC<ThematicBasketsProps> = ({
         </div>
 
         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200 text-xs font-semibold">
-          {(['ALL', 'NSE', 'NASDAQ', 'HYBRID'] as const).map((ex) => (
+          {(['ALL', 'BSE', 'NSE', 'NASDAQ', 'HYBRID'] as const).map((ex) => (
             <button
               key={ex}
               onClick={() => setFilterExchange(ex)}

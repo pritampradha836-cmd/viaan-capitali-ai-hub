@@ -3,6 +3,7 @@ export type NavigationTab =
   | 'fand-o'
   | 'baskets'
   | 'quant'
+  | 'optimizations'
   | 'automation'
   | 'banking'
   | 'admin';
@@ -18,6 +19,28 @@ export interface Candle {
   volume: number;
 }
 
+export interface MarketDepthLevel {
+  bidQty: number;
+  bidPrice: number;
+  askPrice: number;
+  askQty: number;
+}
+
+export interface StockMarketDepth {
+  bse: {
+    bids: MarketDepthLevel[];
+    asks: MarketDepthLevel[];
+    totalBidQty: number;
+    totalAskQty: number;
+  };
+  nse: {
+    bids: MarketDepthLevel[];
+    asks: MarketDepthLevel[];
+    totalBidQty: number;
+    totalAskQty: number;
+  };
+}
+
 export interface Stock {
   symbol: string;
   name: string;
@@ -30,6 +53,14 @@ export interface Stock {
   volume: string;
   peRatio?: number;
   marketCap?: string;
+  sector?: string;
+  bsePrice?: number; // Dual-listed price on Bombay Stock Exchange
+  nsePrice?: number; // Dual-listed price on National Stock Exchange
+  arbitrageSpread?: number; // Difference in rupees / points for SOR
+  futuresPrice?: number; // Near-month future price
+  basisSpread?: number; // Cash vs Future basis spread
+  annualizedCarryYield?: number; // Annualized yield % for cash-future arbitrage
+  depth?: StockMarketDepth;
   candles: Candle[];
 }
 
@@ -38,13 +69,16 @@ export interface Order {
   symbol: string;
   exchange: Exchange;
   type: 'BUY' | 'SELL';
-  orderType: 'MARKET' | 'LIMIT' | 'SL';
+  orderType: 'MARKET' | 'LIMIT' | 'SL' | 'ICEBERG' | 'TWAP' | 'SMART_ROUTER' | 'SNIPE_PEGGED';
   product: 'MIS' | 'CNC' | 'NRML';
   quantity: number;
   price: number;
   triggerPrice?: number;
   status: 'EXECUTED' | 'OPEN' | 'CANCELLED';
   timestamp: string;
+  sorExchangeExecuted?: 'NSE' | 'BSE';
+  priceImprovement?: number;
+  algoSlices?: number;
 }
 
 export interface Position {
@@ -90,7 +124,7 @@ export interface ThematicBasket {
   cagr3Y: number;
   volatility: 'Low' | 'Medium' | 'High';
   minInvestment: number;
-  exchange: 'NSE' | 'NASDAQ' | 'HYBRID';
+  exchange: 'NSE' | 'BSE' | 'NASDAQ' | 'HYBRID';
   rebalanceCadence: string;
   constituents: Array<{
     symbol: string;
@@ -98,6 +132,7 @@ export interface ThematicBasket {
     weight: number;
     price: number;
     shares: number;
+    exchange?: Exchange;
   }>;
 }
 
@@ -134,7 +169,7 @@ export interface BrokerAccount {
 export interface TradingBot {
   id: string;
   name: string;
-  strategyType: 'Delta-Neutral' | 'Options Scalper' | 'VWAP Momentum' | 'Breakout';
+  strategyType: 'Delta-Neutral' | 'Options Scalper' | 'VWAP Momentum' | 'Breakout' | 'Cross-Exchange Arbitrage';
   status: 'RUNNING' | 'PAUSED';
   targetIndex: string;
   pnl: number;
@@ -149,6 +184,8 @@ export interface AdminSettings {
   autoSquareOffTime: string;
   brokerApiGateway: string;
   brokeragePerOrder: number;
+  smartOrderRoutingEnabled: boolean;
+  arbitrageAutoCapture: boolean;
 }
 
 export interface ChatMessage {
@@ -157,4 +194,49 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   action?: any;
+}
+
+// Market Optimization Types
+export type MarketOptimizationMode = 
+  | 'sor'
+  | 'cash-futures'
+  | 'execution-algos'
+  | 'margin-optimizer'
+  | 'portfolio-mpt';
+
+export interface SorFeeComparison {
+  turnoverFeeBse: number;
+  turnoverFeeNse: number;
+  stt: number;
+  sebiCharges: number;
+  gst: number;
+  stampDuty: number;
+  totalCostBse: number;
+  totalCostNse: number;
+  netPriceImprovement: number;
+  optimalExchange: 'BSE' | 'NSE';
+}
+
+export interface CashFuturesArbitrageRow {
+  symbol: string;
+  name: string;
+  spotPrice: number;
+  futuresPrice: number;
+  basisSpread: number;
+  basisPct: number;
+  daysToExpiry: number;
+  annualizedCarryYield: number;
+  lotSize: number;
+  marginReq: number;
+  netYieldRupees: number;
+  recommendation: 'STRONG_CARRY' | 'MODERATE_CARRY' | 'FAIR_VALUE';
+}
+
+export interface AlgoSliceSchedule {
+  sliceIndex: number;
+  time: string;
+  quantity: number;
+  projectedPrice: number;
+  expectedSlippageBps: number;
+  routingTarget: 'NSE' | 'BSE' | 'SOR';
 }

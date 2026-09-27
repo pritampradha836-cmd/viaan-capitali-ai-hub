@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { TradingTerminal } from './components/TradingTerminal';
+import { MarketOptimizations } from './components/MarketOptimizations';
 import { FandODesk } from './components/FandODesk';
 import { ThematicBaskets } from './components/ThematicBaskets';
 import { QuantDataScience } from './components/QuantDataScience';
@@ -299,6 +300,14 @@ export default function App() {
             onPlaceOrder={handlePlaceOrder}
             onSquareOffPosition={handleSquareOffPosition}
             onCancelOrder={handleCancelOrder}
+            availableCash={availableCash}
+          />
+        )}
+
+        {currentTab === 'optimizations' && (
+          <MarketOptimizations
+            stocks={stocks}
+            onPlaceOrder={handlePlaceOrder}
             availableCash={availableCash}
           />
         )}
